@@ -50,6 +50,7 @@ All added projects display a `Failed` status.
 ----
 + Because all of the specified collections install without errors, this proves that controller trusts the web SSL certificate for pass:[<uri>https://hub.lab.example.com</uri>].
 . Exit from `controller`.
++
 [subs="+quotes"]
 ----
 [awx@controller PROJECT]$ *exit*
