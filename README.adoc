@@ -49,6 +49,11 @@ All added projects display a `Failed` status.
 > *-r collections/requirements.yml -p collections/*
 ----
 + Because all of the specified collections install without errors, this proves that controller trusts the web SSL certificate for pass:[<uri>https://hub.lab.example.com</uri>].
+. Exit from `controller`.
+[subs="+quotes"]
+----
+[awx@controller PROJECT]$ *exit*
+----
 . From the controller web UI, go to `Settings` and then `Jobs settings`.
 Click `Edit` at the bottom of the page and then toggle the `Ignore Ansible Galaxy SSL Certificte Verification` so that it has a value of `On`.
 Click `Save` at the bottom of the page.
@@ -68,8 +73,39 @@ Replace the `API Token` with the copied token and click `Save`.
 Go to Resources -> Credentials and attempt the project synchronizations again.
 ====
 
-== Next Steps
+== Using a Custom EE
 
-I suspect that the control plane execution environment fails with an SSL error because it does not trust certificates signed by our classroom certificate authority.
+The root cause for failure is that the control plane execution environment does not trust certificates signed by our classroom certificate authority.
+This is the exact same issue that we experienced when trying to synchronize Git project repositories using HTTPS instead of SSH.
 
-We could test this by using the `ansible-builder` command to create a new `ee-supported-rhel8` container image where we prepend the `git.lab.example.com.crt`, `hub.lab.example.com.crt`, and `classroom-ca.pem` certificates to the existing `/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem` within the container.
+You can test this by building a new execution environment that includes our classroom certificates.
+
+. Ensure that automation controller verifies Ansible galaxy SSL certificates.
+From the controller web UI, go to `Settings` and then `Jobs settings`.
+Click `Edit` at the bottom of the page and then toggle the `Ignore Ansible Galaxy SSL Certificte Verification` so that it has a value of `Off`.
+Click `Save` at the bottom of the page.
+. Change into the `custom-image` directory.
++
+[subs="+quotes"]
+----
+[student@workstation collection-test]$ *cd custom-image/*
+----
+. Install content collections needed by the `create-custom-ee.yml` playbook:
++
+[subs="+quotes"]
+----
+[student@workstation custom-image]$ *ansible-galaxy collection install \*
+> *-r collections/requirements.yml -p collections/*
+----
+. Run the `create-custom-ee.yml` playbook.
+This playbook creates a custom execution environment that includes our classroom certificates.
+The playbook uploads the container image to pass:[<uri>https://hub.lab.example.com</uri>] and then pulls the image down to pass:[<uri>controller.lab.example.com</uri>].
+The new image is tagged as `hub.lab.example.com/ee-supported-rhel8:2.0` (the name expected by the control plane execution environment).
+Enter `student` for the privilege escalation password.
++
+[subs="+quotes"]
+----
+[student@workstation custom-image]$ *ansible-playbook create-custom-ee.yml -K*
+----
+. From the automation controller web UI, got to Resources -> Credentials and attempt the project synchronizations again.
+Even though SSL certificate verification is enabled, all projects succeed because the new control plane execution environment trusts the certificates signed by our classroom certificate authority.
