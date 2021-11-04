@@ -14,7 +14,7 @@ If you need to rebuild the collection, then change into the `./collections-sourc
 +
 [subs="+quotes"]
 ----
-[student@workstation testing]$ *ansible-galaxy collection install \*
+[student@workstation collection-test]$ *ansible-galaxy collection install \*
 > *-r collections/requirements.yml -p collections/*
 ----
 . Run the `prep-for-testing.yml` playbook.
@@ -22,18 +22,18 @@ Enter `student` for the privilege escalation password.
 +
 [subs="+quotes"]
 ----
-[student@workstation testing]$ *ansible-playbook prep-for-testing.yml -K*
+[student@workstation collection-test]$ *ansible-playbook prep-for-testing.yml -K*
 ----
 +
 The playbook likely fails when attempting to synchronize the projects.
 . Navigate to pass:[<uri>https://controller.lab.example.com</uri>] and log in with the `admin` user name and the `redhat` password.
 . Go to Resources -> Projects.
-All added projects dislay a `Failed` status.
+All added projects display a `Failed` status.
 . Connect to `awx@controller`.
 +
 [subs="+quotes"]
 ----
-[student@workstation testing]$ *ssh awx@controller*
+[student@workstation collection-test]$ *ssh awx@controller*
 ----
 . Change to the `/var/lib/awx/projects/` directory.
 +
@@ -48,3 +48,28 @@ All added projects dislay a `Failed` status.
 [awx@controller PROJECT]$ *ansible-galaxy collection install \*
 > *-r collections/requirements.yml -p collections/*
 ----
++ Because all of the specified collections install without errors, this proves that controller trusts the web SSL certificate for pass:[<uri>https://hub.lab.example.com</uri>].
+. From the controller web UI, go to `Settings` and then `Jobs settings`.
+Click `Edit` at the bottom of the page and then toggle the `Ignore Ansible Galaxy SSL Certificte Verification` so that it has a value of `On`.
+Click `Save` at the bottom of the page.
+. Go to Resources -> Projects and click the `Sync Project` icon for the `All Collections Project`, `Community Collections Project`, `Published Collections Project`, and `Red Hat Collections Project` projects.
+All projects display a status of `Successful`.
++
+[IMPORTANT]
+====
+If the projects continue to fail, update the `Hub: Community Collections`, `Hub: Published Collections`, and `Hub: Red{nbsp}Hat Certified Collections` credentials with a new API token.
+
+From the private automation hub web UI, go to Collections -> API Token and then click `Load token`.
+Copy the token.
+
+From the automation controller web UI, got to Resources -> Credentials and edit each of the hub credentials.
+Replace the `API Token` with the copied token and click `Save`.
+
+Go to Resources -> Credentials and attempt the project synchronizations again.
+====
+
+== Next Steps
+
+I suspect that the control plane execution environment fails with an SSL error because it does not trust certificates signed by our classroom certificate authority.
+
+We could test this by using the `ansible-builder` command to create a new `ee-supported-rhel8` container image where we prepend the `git.lab.example.com.crt`, `hub.lab.example.com.crt`, and `classroom-ca.pem` certificates to the existing `/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem` within the container.
