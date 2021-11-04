@@ -85,6 +85,8 @@ You can test this by building a new execution environment that includes our clas
 From the controller web UI, go to `Settings` and then `Jobs settings`.
 Click `Edit` at the bottom of the page and then toggle the `Ignore Ansible Galaxy SSL Certificte Verification` so that it has a value of `Off`.
 Click `Save` at the bottom of the page.
+. From the automation controller web UI, got to Resources -> Credentials and attempt the project synchronizations again.
+All project synchronizations fail.
 . Change into the `custom-image` directory.
 +
 [subs="+quotes"]
