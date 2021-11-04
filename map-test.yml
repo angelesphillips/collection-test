@@ -1,0 +1,10 @@
+---
+- name: Map test
+  hosts: localhost
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Combine API Token names
+      debug:
+        #msg: "{{ api_token_credential | map('extract', name) | list }}"
+        msg: "{{ api_token_credential | map(attribute='name') | list }}"

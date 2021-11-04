@@ -1,0 +1,7 @@
+[user]
+  name = Git Lab
+  email = git@lab.example.com
+[push]
+  default = simple
+[credential]
+  helper = store

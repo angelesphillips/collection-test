@@ -1,0 +1,45 @@
+---
+- name: Prep environment to test private automation hub content collections
+  hosts: workstation.lab.example.com
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Fail if mode is not defined
+      fail:
+        msg: The "mode" variable must be defined with a value of "add" or "remove".
+      when: mode is not defined or (mode|lower != "add" and mode|lower != "remove")
+    
+    - name: Get private automation hub API token
+      include_tasks: tasks/get-hub-token.yml
+
+    - name: Create hub credentials in controller
+      vars:
+        credential: "{{ api_token_credential }}"
+      include_tasks: tasks/api-token-credentials.yml
+
+    - name: Associate hub credentials with the Default organization
+      vars:
+        credential: "{{ api_token_credential }}"
+      include_tasks: tasks/associate-hub-credentials.yml
+
+    - name: Configure Git
+      include_tasks: tasks/git.yml
+
+    - name: Create a test inventory in controller
+      include_tasks: tasks/inventories.yml
+
+    - name: Create a machine credential in controller
+      vars:
+        credential: "{{ machine_credential }}"
+      include_tasks: tasks/machine-credentials.yml
+
+    - name: Create a Git credential for project synchronization in controller
+      vars:
+        credential: "{{ git_credential }}"
+      include_tasks: tasks/scm-credentials.yml
+
+    - name: Create a test project in controller
+      include_tasks: tasks/projects.yml
+
+    - name: Create a job template in controller
+      include_tasks: tasks/job-templates.yml

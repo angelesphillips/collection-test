@@ -1,0 +1,11 @@
+---
+- name: Test multiple collections
+  hosts: servere.lab.example.com
+  tasks:
+    - name: Query controller for meta data
+      ansible.controller.controller_meta:
+      register: controller_meta_data
+
+    - name: Show controller_meta_data
+      debug:
+        var: controller_meta_data

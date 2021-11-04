@@ -1,0 +1,149 @@
+---
+- name: Create git configuration file
+  copy:
+    src: files/gitconfig
+    dest: "/home/student/.gitconfig"
+    mode: 0755
+
+- name: Create git credentials file
+  copy:
+    src: files/git-credentials
+    dest: "/home/student/.git-credentials"
+    mode: 0755
+
+- name: Ensure python-gitlab is installed
+  become: true
+  pip:
+    name: python-gitlab<=1.12.1
+
+- name: Create GitLab group
+  community.general.gitlab_group:
+    api_url: "{{ gitlab['api_url'] }}"
+    api_token: "{{ gitlab['api_token'] }}"
+    validate_certs: false
+    name: "{{ gitlab['group']['name'] }}"
+    description: "{{ gitlab['group']['description'] | default(omit) }}"
+    visibility: "{{ gitlab['group']['visibility'] | default('public') }}"
+    state: present
+
+- name: Create GitLab project
+  community.general.gitlab_project:
+    api_url: "{{ gitlab['api_url'] }}"
+    api_token: "{{ gitlab['api_token'] }}"
+    validate_certs: false
+    name: "{{ item['name'] }}"
+    group: "{{ item['group'] }}"
+    description: "{{ item['description'] | default(omit) }}"
+    visibility: "{{ item['visibility'] | default('public') }}"
+    import_url: "{{ item['import_url'] | default(omit) }}"
+    state: present
+  loop: "{{ projects }}"
+  loop_control:
+    label: Managing the "{{ item['name'] }}" GitLab project.
+
+- name: Create a temporary directory to stage materials
+  tempfile:
+    state: directory
+  register: tempdir
+
+- block:
+    - name: Attempt to clone the exercise repo
+      ansible.builtin.git:
+        repo: "https://git.lab.example.com/git/{{ item }}.git"
+        version: main
+        dest: "{{ tempdir['path'] }}/{{ item }}"
+      loop:
+        - test-all
+        - test-rh
+        - test-published
+        - test-community
+      ignore_errors: true
+
+    #- name: Determine whether repo is empty
+    #  shell:
+    #    cmd: git log
+    #    chdir: "{{ tempdir['path'] }}"
+    #  register: repo_empty
+
+    #- name: Finish message
+    #  debug:
+    #    msg: "Repository is already populated"
+
+    #- name: Check whether student has a local repo
+    #  stat:
+    #    path: "/home/student/git-repos/{{ exercise }}"
+    #  register: local_repo
+
+    #- name: Generate backup extension with dir modified time
+    #  set_fact:
+    #    backup_ext: ".backup-{{ '%a-%d-%H:%M:%S' | strftime(local_repo.stat.mtime) }}"
+    #  when: local_repo.stat.exists
+
+    #- name: Back up local repo if it exists
+    #  shell: "mv '/home/student/git-repos/{{ exercise }}' '/home/student/git-repos/{{ exercise }}{{ backup_ext }}'"
+    #  when: local_repo.stat.exists
+
+  #rescue:
+    - name: Customize ansible.cfg
+      template:
+        src: ../templates/ansible.cfg.j2
+        dest: "{{ tempdir['path'] }}/{{ item }}/ansible.cfg"
+      loop:
+        - test-all
+        - test-rh
+        - test-published
+        - test-community
+
+    - name: Copy additional files and directories to tempdir['path']
+      copy:
+        src: ../git-repos/{{ item }}
+        dest: "{{ tempdir['path'] }}/"
+      loop:
+        - test-all
+        - test-rh
+        - test-published
+        - test-community
+
+    - name: Temporarily configure student as the group owner
+      community.general.gitlab_group_members:
+        api_url: "{{ gitlab['api_url'] }}"
+        api_token: "{{ gitlab['api_token'] }}"
+        validate_certs: false
+        gitlab_group: "{{ gitlab['group']['name'] }}"
+        gitlab_user: "{{ gitlab['user'] }}"
+        access_level: owner
+        state: present
+
+    - name: Commit exercise materials
+      shell:
+        cmd: >
+          git add . &&
+          git commit -m 'Initial commit' &&
+          git branch -m main
+        chdir: "{{ tempdir['path'] }}/{{ item }}"
+      loop:
+        - test-all
+        - test-rh
+        - test-published
+        - test-community
+
+    - name: Ensure the materials are pushed to GitLab
+      shell:
+        cmd: "git push --set-upstream origin main"
+        chdir: "{{ tempdir['path'] }}/{{ item }}"
+        warn: false
+      loop:
+        - test-all
+        - test-rh
+        - test-published
+        - test-community
+
+    - name: Configure student as a developer
+      community.general.gitlab_group_members:
+        api_url: "{{ gitlab['api_url'] }}"
+        api_token: "{{ gitlab['api_token'] }}"
+        validate_certs: false
+        gitlab_group: "{{ gitlab['group']['name'] }}"
+        gitlab_user: "{{ gitlab['user'] }}"
+        access_level: developer
+        state: present

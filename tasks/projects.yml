@@ -1,0 +1,45 @@
+- name: Fail if mode is not defined
+  fail:
+    msg: The "mode" variable must be defined with a value of "add" or "remove".
+  when: mode is not defined or (mode|lower != "add" and mode|lower != "remove")
+
+- name: Fail if project is not defined
+  fail:
+    msg: The "project" variable must be defined.
+  when: project is not defined
+
+- name: Add project
+  ansible.controller.project:
+    controller_host: "{{ controller_auth['host'] }}"
+    controller_username: "{{ controller_auth['username'] }}"
+    controller_password: "{{ controller_auth['password'] }}"
+    validate_certs: False
+    name: "{{ item['name'] }}"
+    description: "{{ item['description'] | default(omit) }}"
+    organization: "{{ item['organization'] | default('Default') }}"
+    state: present
+    scm_type: "{{ item['scm_type'] }}"
+    scm_url: "{{ item['scm_url'] | default(omit) }}"
+    scm_update_on_launch: "{{ item['scm_update_on_launch'] | default(False) }}"
+    allow_override: "{{ item['allow_override'] | default(omit) }}"
+    local_path: "{{ item['local_path'] | default(omit) }}"
+    credential: "{{ item['credential'] | default(omit) }}"
+    default_environment: "{{ item['default_environment'] | default(omit) }}"
+  loop: "{{ project }}"
+  loop_control:
+    label: "Adding project: {{ item.name }}"
+  when: mode|lower == 'add'
+
+- name: Remove project
+  ansible.controller.project:
+    controller_host: "{{ controller_auth['host'] }}"
+    controller_username: "{{ controller_auth['username'] }}"
+    controller_password: "{{ controller_auth['password'] }}"
+    validate_certs: False
+    name: "{{ item['name'] }}"
+    organization: "{{ item['organization'] | default('Default') }}"
+    state: absent
+  loop: "{{ project }}"
+  loop_control:
+    label: "Removing project: {{ item.name }}"
+  when: mode|lower == 'remove'

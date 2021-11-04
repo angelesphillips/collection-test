@@ -1,0 +1,50 @@
+== Using Content Collections from Private Automation Hub in Automation Controller
+
+. Navigate to pass:[<uri>https://hub.lab.example.com</uri>] and log in with the `admin` user name and the `redhat` password.
+. Go to Collections -> Namespaces and click Create.
+Enter `mike` in the `Name` field and then click `Create`.
+. Click `Upload collection` and upload the `./mike-hello-1.0.0.tar.gz` archive.
++
+[NOTE]
+====
+If you need to rebuild the collection, then change into the `./collections-source/mike/hello/` directory, update the `version` variable in the `galaxy.yml` file, and then run the `ansible-galaxy collection build` command.
+====
+. Go to Collections -> Approval and approve the uploaded collection.
+. Install content collections needed by the `prep-for-testing.yml` playbook:
++
+[subs="+quotes"]
+----
+[student@workstation testing]$ *ansible-galaxy collection install \*
+> *-r collections/requirements.yml -p collections/*
+----
+. Run the `prep-for-testing.yml` playbook.
+Enter `student` for the privilege escalation password.
++
+[subs="+quotes"]
+----
+[student@workstation testing]$ *ansible-playbook prep-for-testing.yml -K*
+----
++
+The playbook likely fails when attempting to synchronize the projects.
+. Navigate to pass:[<uri>https://controller.lab.example.com</uri>] and log in with the `admin` user name and the `redhat` password.
+. Go to Resources -> Projects.
+All added projects dislay a `Failed` status.
+. Connect to `awx@controller`.
++
+[subs="+quotes"]
+----
+[student@workstation testing]$ *ssh awx@controller*
+----
+. Change to the `/var/lib/awx/projects/` directory.
++
+[subs="+quotes"]
+----
+[awx@controller ~]$ *cd /var/lib/awx/projects/*
+----
+. (Optional) For each of the projects `test-all`, `test-rh`, `test-published`, and `test-community`, you can change into the project directory and verify that the content collections can be installed locally.
++
+[subs="+quotes"]
+----
+[awx@controller PROJECT]$ *ansible-galaxy collection install \*
+> *-r collections/requirements.yml -p collections/*
+----

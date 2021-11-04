@@ -1,0 +1,103 @@
+- name: Fail if mode is not defined
+  fail:
+    msg: The "mode" variable must be defined with a value of "add" or "remove".
+  when: mode is not defined or (mode|lower != "add" and mode|lower != "remove")
+
+- name: Fail if inventories is not defined
+  fail:
+    msg: The "inventories" variable must be defined.
+  when: inventories is not defined
+
+- block:
+    - name: Add inventory
+      ansible.controller.inventory:
+        controller_host: "{{ controller_auth['host'] }}"
+        controller_username: "{{ controller_auth['username'] }}"
+        controller_password: "{{ controller_auth['password'] }}"
+        validate_certs: false
+        name: "{{ item['name'] }}"
+        description: "{{ item['description'] | default(omit) }}"
+        organization: "{{ item['organization'] | default('Default') }}"
+        variables: "{{ item['variables'] | default(omit) }}"
+        state: present
+      loop: "{{ inventories }}"
+      loop_control:
+        label: "Adding inventory: {{ item.name }}"
+
+    - name: Add host to inventory
+      ansible.controller.host:
+        controller_host: "{{ controller_auth['host'] }}"
+        controller_username: "{{ controller_auth['username'] }}"
+        controller_password: "{{ controller_auth['password'] }}"
+        validate_certs: false
+        name: "{{ item[1]['name'] }}"
+        description: "{{ item[1]['description'] }}"
+        variables: "{{ item[1]['variables'] | default(omit) }}"
+        inventory: "{{ item[0]['name'] }}"
+        state: present
+      loop: "{{ q('subelements', inventories, 'hosts', {'skip_missing': True}) }}"
+      loop_control:
+        label: Adding host "{{ item[1]['name'] }}" to inventory "{{ item[0]['name'] }}"
+
+    - name: Add group to inventory
+      ansible.controller.group:
+        controller_host: "{{ controller_auth['host'] }}"
+        controller_username: "{{ controller_auth['username'] }}"
+        controller_password: "{{ controller_auth['password'] }}"
+        validate_certs: false
+        name: "{{ item[1]['name'] }}"
+        description: "{{ item[1]['description'] }}"
+        variables: "{{ item[1]['variables'] | default(omit) }}"
+        hosts: "{{ item[1]['hosts'] }}"
+        inventory: "{{ item[0]['name'] }}"
+        state: present
+      loop: "{{ q('subelements', inventories, 'host_groups', {'skip_missing': True}) }}"
+      loop_control:
+        label: Adding group "{{ item[1]['name'] }}" to inventory "{{ item[0]['name'] }}"
+  when: mode|lower == "add"
+
+- block:
+    - name: Remove host from inventory
+      ansible.controller.host:
+        controller_host: "{{ controller_auth['host'] }}"
+        controller_username: "{{ controller_auth['username'] }}"
+        controller_password: "{{ controller_auth['password'] }}"
+        validate_certs: false
+        name: "{{ item[1]['name'] }}"
+        inventory: "{{ item[0]['name'] }}"
+        state: absent
+      loop: "{{ q('subelements', inventories, 'hosts', {'skip_missing': True}) }}"
+      loop_control:
+        label: Removing host "{{ item[1]['name'] }}" from inventory "{{ item[0]['name'] }}"
+
+    - name: Remove group from inventory
+      ansible.controller.group:
+        controller_host: "{{ controller_auth['host'] }}"
+        controller_username: "{{ controller_auth['username'] }}"
+        controller_password: "{{ controller_auth['password'] }}"
+        validate_certs: false
+        name: "{{ item[1]['name'] }}"
+        description: "{{ item[1]['description'] }}"
+        variables: "{{ item[1]['variables'] | default(omit) }}"
+        hosts: "{{ item[1]['hosts'] }}"
+        inventory: "{{ item[0]['name'] }}"
+        state: absent
+      loop: "{{ q('subelements', inventories, 'host_groups', {'skip_missing': True}) }}"
+      loop_control:
+        label: Removing group "{{ item[1]['name'] }}" from inventory "{{ item[0]['name'] }}"
+
+    - name: Remove inventory
+      ansible.controller.inventory:
+        controller_host: "{{ controller_auth['host'] }}"
+        controller_username: "{{ controller_auth['username'] }}"
+        controller_password: "{{ controller_auth['password'] }}"
+        validate_certs: false
+        name: "{{ item['name'] }}"
+        description: "{{ item['description'] | default(omit) }}"
+        organization: "{{ item['organization'] | default('Default') }}"
+        state: absent
+      loop: "{{ inventories }}"
+      loop_control:
+        label: "Removing inventory: {{ item.name }}"
+  when: mode|lower == "remove"
+

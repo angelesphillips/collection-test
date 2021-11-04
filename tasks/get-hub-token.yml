@@ -1,0 +1,21 @@
+---
+- block:
+    - name: Post Request for Hub API Token
+      vars:
+        hub_host: hub.lab.example.com
+        hub_username: admin
+        hub_password: redhat
+        hub_username_password: "{{ hub_username }}:{{ hub_password }}"
+      uri:
+        url: https://{{ hub_host }}/api/galaxy/v3/auth/token/
+        method: POST
+        headers:
+          Content-type: application/json
+          Accept: application/json
+          Authorization: Basic {{ hub_username_password | string | b64encode }}
+      register: token_request
+
+    - name: Set hub_api_token fact
+      set_fact:
+        hub_api_token: "{{ token_request['json']['token'] }}"
+  when: hub_api_token is not defined

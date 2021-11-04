@@ -1,0 +1,137 @@
+---
+test_dir: /home/student/testing
+mode: add
+
+controller_auth:
+  username: admin
+  password: redhat
+  host: controller.lab.example.com
+
+exercise: collections-test
+
+gitlab:
+  api_url: https://git.lab.example.com
+  api_token: redhat-training-gitlab-api-token
+  user: student
+  group:
+    name: git
+    description: Group for classroom exercises
+    visibility: public
+
+projects:
+  - name: test-all
+    group: git
+    description: Repository to test 3 types of content collections
+    visibility: public
+  - name: test-rh
+    group: git
+    description: Repository to test Red Hat Certified content collections
+    visibility: public
+  - name: test-published
+    group: git
+    description: Repository to test published content collections
+    visibility: public
+  - name: test-community
+    group: git
+    description: Repository to test community content collections
+    visibility: public
+
+machine_credential:
+  - name: Exercise Credential
+    description: devops SSH credential
+    organization: Default
+    credential_type: Machine
+    username: devops
+    password: redhat
+    become_method: sudo
+    become_username: root
+    become_password: redhat
+
+inventories:
+  - name: Test Inventory
+    organization: Default
+    hosts:
+      - name: servere.lab.example.com
+        description: Server E
+
+git_credential:
+  - name: Git Project Credential
+    description: Git credential for git repo
+    organization: Default
+    credential_type: Source Control
+    username: student
+    ssh_key_data: /home/student/.ssh/gitlab_rsa
+
+project:
+  - name: All Collections Project
+    organization: Default
+    scm_type: git
+    scm_url: git@git.lab.example.com:git/test-all.git
+    allow_override: True
+    credential: Git Project Credential
+    default_environment: Minimal execution environment
+  - name: Red Hat Collections Project
+    organization: Default
+    scm_type: git
+    scm_url: git@git.lab.example.com:git/test-rh.git
+    allow_override: True
+    credential: Git Project Credential
+    default_environment: Minimal execution environment
+  - name: Published Collections Project
+    organization: Default
+    scm_type: git
+    scm_url: git@git.lab.example.com:git/test-published.git
+    allow_override: True
+    credential: Git Project Credential
+    default_environment: Minimal execution environment
+  - name: Community Collections Project
+    organization: Default
+    scm_type: git
+    scm_url: git@git.lab.example.com:git/test-community.git
+    allow_override: True
+    credential: Git Project Credential
+    default_environment: Minimal execution environment
+
+api_token_credential:
+  - name: "Hub: Red Hat Certified Collections"
+    description: Credential to download Red Hat Certified Collections
+    url: https://hub.lab.example.com/api/galaxy/content/rh-certified/
+    organization: Default
+  - name: "Hub: Published Collections"
+    description: Credential to download Published Collections
+    url: https://hub.lab.example.com/api/galaxy/content/published/
+    organization: Default
+  - name: "Hub: Community Collections"
+    description: Credential to download Community Collections
+    url: https://hub.lab.example.com/api/galaxy/content/community/
+    organization: Default
+
+job_template:
+  - name: All Job Template
+    job_type: run
+    inventory: Test Inventory
+    project: Test Project
+    playbook: test.yml
+    credentials:
+      - "Exercise Credential"
+  - name: Red Hat Job Template
+    job_type: run
+    inventory: Test Inventory
+    project: Test Project
+    playbook: test.yml
+    credentials:
+      - "Exercise Credential"
+  - name: Published Job Template
+    job_type: run
+    inventory: Test Inventory
+    project: Test Project
+    playbook: test.yml
+    credentials:
+      - "Exercise Credential"
+  - name: Community Job Template
+    job_type: run
+    inventory: Test Inventory
+    project: Test Project
+    playbook: test.yml
+    credentials:
+      - "Exercise Credential"

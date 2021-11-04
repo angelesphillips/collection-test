@@ -1,0 +1,5 @@
+---
+- name: Test multiple collections
+  hosts: servere.lab.example.com
+  roles:
+    - name: mike.hello.world

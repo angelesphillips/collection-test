@@ -1,0 +1,13 @@
+---
+- name: Test multiple collections
+  hosts: servere.lab.example.com
+  tasks:
+    - name: Create a prviate key
+      community.crypto.openssl_privatekey:
+        path: "/tmp/{{ ansible_facts['fqdn'] }}.key"
+        mode: '400'
+      register: create_private_key
+
+    - name: Show create_private_key
+      debug:
+        var: create_private_key

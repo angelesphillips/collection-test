@@ -1,0 +1,5 @@
+---
+# tasks file for world
+- name: Print welcome_message
+  debug:
+    msg: "{{ welcome_message }}"

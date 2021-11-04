@@ -1,0 +1,4 @@
+---
+collections:
+  - name: /home/student/.venv/labs/lib/python3.6/site-packages/do374/downloaded-collections/ansible-controller-4.0.0.tar.gz
+  - name: /home/student/.venv/labs/lib/python3.6/site-packages/do374/downloaded-collections/community-general-3.2.0.tar.gz

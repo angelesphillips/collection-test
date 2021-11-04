@@ -1,0 +1,5 @@
+---
+collections:
+  - name: mike.hello
+  - name: community.crypto
+  - name: ansible.controller
