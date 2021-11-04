@@ -1,1 +1,3 @@
 collections/ansible_collections
+custom-image/context
+custom-image/collections/ansible_collections

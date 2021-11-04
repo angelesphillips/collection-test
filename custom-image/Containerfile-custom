@@ -1,0 +1,15 @@
+ARG EE_BASE_IMAGE=ee-supported-rhel8:2.0
+ARG EE_BUILDER_IMAGE=ansible-builder-rhel8:2.0
+
+FROM $EE_BASE_IMAGE as galaxy
+ARG ANSIBLE_GALAXY_CLI_COLLECTION_OPTS=
+USER root
+
+
+FROM $EE_BUILDER_IMAGE as builder
+
+FROM $EE_BASE_IMAGE
+USER root
+COPY --from=builder /output/ /output/
+COPY tls-ca-bundle.pem /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+RUN /output/install-from-bindep && rm -rf /output/wheels

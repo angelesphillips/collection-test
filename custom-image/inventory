@@ -1,0 +1,4 @@
+workstation.lab.example.com ansible_connection=local
+workstation ansible_connection=local
+localhost ansible_connection=local
+controller.lab.example.com

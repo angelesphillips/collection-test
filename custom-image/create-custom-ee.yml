@@ -1,0 +1,118 @@
+---
+- name: Pull ee-supported-rhel8:2.0
+  vars:
+    ee: ee-supported-rhel8
+  import_playbook: /home/student/.venv/labs/lib/python3.6/site-packages/do374/ansible/common/pull-ee.yml
+
+- name: Pull ansible-builder-rhel8:2.0
+  vars:
+    ee: ansible-builder-rhel8
+  import_playbook: /home/student/.venv/labs/lib/python3.6/site-packages/do374/ansible/common/pull-ee.yml
+
+- name: Create custom EE with certificates
+  hosts: workstation.lab.example.com
+  tasks:
+    - name: Install software
+      become: true
+      yum:
+        name: ansible-builder
+        state: latest
+
+    - name: Set facts
+      set_fact:
+        playbook_dir: "{{ ansible_facts['env']['PWD'] }}"
+
+    - name: Create EE skeleton directory
+      command:
+        cmd: ansible-builder create
+        chdir: "{{ playbook_dir }}"
+
+    - name: Copy custom Containerfile
+      copy:
+        src: Containerfile-custom
+        dest: "{{ playbook_dir }}/context/Containerfile"
+
+    - name: Copy custom certificate file
+      copy:
+        src: tls-ca-bundle.pem
+        dest: "{{ playbook_dir }}/context/"
+
+    - name: Build the custom EE
+      containers.podman.podman_image:
+        name: ee-supported-rhel8
+        tag: certs
+        path: "{{ playbook_dir }}/context"
+        push: yes
+        username: admin
+        password: redhat
+        push_args:
+          dest: hub.lab.example.com/
+
+- name: Pull custom EE to controller and rename as ee-supported-rhel8:2.0
+  hosts: controller.lab.example.com
+  gather_facts: False
+  vars:
+    hub_info:
+      registry: hub.lab.example.com
+      username: admin
+      password: redhat
+    default_ee_tag: '2.0'
+    ee: ee-supported-rhel8:certs
+  tasks:
+    - name: Fail if ee is not defined
+      fail:
+        msg: The "ee" variable must be defined, such as "ee-supported-rhel8".
+      when: ee is not defined
+
+    - name: Set facts
+      set_fact:
+        ee_image: "{{ ee | regex_replace(':.*') }}"
+        ee_tag: "{% if ee | regex_replace('.*:') == ee | regex_replace(':.*') %}{{ default_ee_tag }}{% else %}{{ ee | regex_replace('.*:') }}{% endif %}"
+        local_container: "{{ hub_info['registry'] }}/{{ ee }}"
+
+    - name: Gather local container image information
+      become: True
+      become_user: awx
+      containers.podman.podman_image_info:
+        name: "{{ ee }}"
+      register: local_containers
+
+    - block:
+        - name: Log in to hub
+          become: True
+          become_user: awx
+          containers.podman.podman_login:
+            username: "{{ hub_info['username'] }}"
+            password: "{{ hub_info['password'] }}"
+            registry: "{{ hub_info['registry'] }}"
+
+        - name: Pull down the EE
+          become: True
+          become_user: awx
+          containers.podman.podman_image:
+            name: "{{ hub_info['registry'] }}/{{ ee_image }}"
+            tag: "{{ ee_tag }}"
+
+        - name: Remove existing ee-supported-rhel8:2.0 image
+          become: True
+          become_user: awx
+          containers.podman.podman_image:
+            name: "{{ hub_info['registry'] }}/{{ ee_image }}"
+            tag: "2.0"
+            state: absent
+
+        - name: Tag ee-supported-rhel8:certs as ee-supported-rhel8:2.0
+          become: True
+          become_user: awx
+          command:
+            cmd: podman tag {{ hub_info['registry'] }}/{{ ee_image }}:{{ ee_tag }} {{ hub_info['registry'] }}/{{ ee_image }}:2.0
+
+      always:
+        - name: Log out of hub
+          become: True
+          become_user: awx
+          containers.podman.podman_login:
+            username: "{{ hub_info['username'] }}"
+            password: "{{ hub_info['password'] }}"
+            registry: "{{ hub_info['registry'] }}"
+      when: (local_containers['images'][0] is not defined) or (local_container not in local_containers['images'][0]['RepoTags'])

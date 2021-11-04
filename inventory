@@ -1,0 +1,1 @@
+workstation.lab.example.com ansible_connection=local
